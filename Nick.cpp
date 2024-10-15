@@ -27,19 +27,12 @@ void Nick::execute(int client_fd)
 		        _server->sendMessage(client_fd, (*it)->getNickName() + "\n");
 		        break;
 		    }
-			// TODO: burası user yoksa olarak refaktör edilecek.
-		    if (it == users.end() - 1)
-		    {
-		        _server->sendMessage(client_fd, "Error : hata \n");
-		    }
 		}
-
 	}
 	else
 		_server->sendMessage(client_fd, "Error : arguman eksik \n");
 	for (size_t i = 0; i < users.size(); i++)
 		_server->sendMessage(client_fd, users[i]->getNickName()+"\n");
-
 }
 
 std::string Nick::getName() const
