@@ -7,7 +7,7 @@ Nick::Nick()
 void Nick::execute(int client_fd)
 {
 	std::vector<User*> users = _server->getUsers();
-	if(_args.size() < 3)
+	if(_args.size() == 2)
 	{
 		for (std::vector<User*>::iterator it = users.begin(); it != users.end(); ++it)
 		{
@@ -20,7 +20,7 @@ void Nick::execute(int client_fd)
 
 		for (std::vector<User*>::iterator it = users.begin(); it != users.end(); ++it)
 		{
-		    if ((*it)->getClientfd() == client_fd)
+		    if ((*it)->getClientfd() == client_fd && !_args[1].empty())
 		    {
 		        (*it)->setNickName(_args[1]);
 		        _server->sendMessage(client_fd, "INFO  New Nickname : ");
@@ -30,9 +30,7 @@ void Nick::execute(int client_fd)
 		}
 	}
 	else
-		_server->sendMessage(client_fd, "Error : arguman eksik \n");
-	for (size_t i = 0; i < users.size(); i++)
-		_server->sendMessage(client_fd, users[i]->getNickName()+"\n");
+		_server->sendError(client_fd, " Argument is missing\n");
 }
 
 std::string Nick::getName() const

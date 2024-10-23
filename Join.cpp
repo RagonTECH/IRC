@@ -14,14 +14,21 @@ void Join::execute(int client_fd)
 			return;
 		}
 	}
-	// if (_args[1][0] == '#')
-	// 	_args[1] = _args[1].substr(1);
-	
-	
+	std::vector<std::string> userChannels = _users->getChannelName();
+	for (std::vector<std::string>::iterator it = userChannels.begin(); it != userChannels.end(); ++it)
+	{
+		if(*it == _args[1])
+		{
+			_server->sendError(client_fd,"You're already joined the channel.\n");
+			return;
+		}
+	}
+	if (_args[1][0] != '#')
+		_args[1] = _args[1].insert(0,"#");
 	Channel *channel = _server->getChannel(_args[1]);
+
     if(!channel)
     {
-		std::cout << "SŞUGDFPISUDFGUISDFPIUGSDGIPUFVSGIUPDFIGPUSIUFGSDIPGYFGIPYSDFIGPUYSDIFGUSOGUPIDFPIGUSDFIPGUASIDGPUFAISGUYFIPGUYDS"<< std::endl;
         channel = new Channel(_args[1]);
         _server->createChannel(channel);
 		channel->setAdminName(_users->getNickName());

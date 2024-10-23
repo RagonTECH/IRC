@@ -14,35 +14,37 @@ void Privmsg::execute(int client_fd)
     }
 
     std::vector<User*> users = _server->getUsers();
-
-    if (!_args[2].empty())
+	std::vector<Channel*> channel = _server->getChannel();
+    if (_args.size() > 2)
     {
         if (_args[1][0] == '#')
         {
-            std::vector<Channel*> channels = _server->getChannel();
-
             std::string channelName = _args[1];
+			std::vector<std::string> nemo = _users->getChannelName();
+			int d = 0;
+			for(std::vector<std::string>::iterator it = nemo.begin(); it != nemo.end(); ++it)
+			{
+				if((*it).data() != _args[1])
+					d++;
+			}
+			if(d == nemo.size())
+			{
+				_server->sendError(client_fd, " You cannot send messages to this channel\n");
+				return;
+			}
+ 			for (std::vector<User*>::iterator it = users.begin(); it != users.end(); ++it)
+ 			{
+ 			    std::vector<std::string> userChannels = (*it)->getChannelName();
 
-            for (size_t i = 0; i < channels.size(); i++)
-            {
-                if (channels[i]->getChannelName() == channelName) 
-                {
-                    for (size_t j = 0; j < users.size(); j++)
-                    {
-                        User* user = users[j];
-                        std::vector<std::string> userChannels = user->getChannelName();
-                        
-                        for (size_t k = 0; k < userChannels.size(); k++) 
-                        {
-                            if (userChannels[k] == channelName && user->getClientfd() != client_fd) 
-                            {
-                                _server->sendMessage(user->getClientfd(), mes + "\n");
-                            }
-                        }
-                    }
-                    return;
-                }
-            }
+ 			    for (size_t k = 0; k < userChannels.size(); k++) 
+ 			    {
+ 			        if (userChannels[k] == channelName && (*it)->getClientfd() != client_fd) 
+ 			        {
+						std::string userName = (*it)->getNickName();
+ 			            _server->sendMessage((*it)->getClientfd(), mes + "\n");
+ 			        }
+ 			    }
+ 			}
         }
         else
         {
@@ -55,15 +57,16 @@ void Privmsg::execute(int client_fd)
                 }
                 if (i == users.size() - 1)
                 {
-                    _server->sendMessage(client_fd, "Error : hata \n");
+                    _server->sendError(client_fd,  " User not found\n");
                 }
             }
         }
     }
     else
     {
-        _server->sendMessage(client_fd, "Error : arguman eksik \n");
+        _server->sendError(client_fd, " Argument error \n");
     }
+	_args.clear();
 }
 
 

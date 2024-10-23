@@ -123,38 +123,30 @@ void Server::forRegisterFromClient(std::string &message, int clientSock, User *u
 
         }
     } 
-
 }
 
 void Server::removeUserAndFd(int client_fd)
 {
-    // close(client_fd);
-    // std::cout << _pollfds.size() << std::endl;
     for (std::vector<pollfd>::iterator poll_it = _pollfds.begin(); poll_it != _pollfds.end(); ++poll_it)
     {
-        std::cout << "asd12" << std::endl;
         if (poll_it->fd == client_fd)
         {
-            std::cout << "girdi" << std::endl;
             close((*poll_it).fd);
 			_pollfds.erase(poll_it);
 			break ;
 
         }
     }
-    std::cout << "çıktı poolagirdi" << std::endl;
     for(std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it)
     {
-        std::cout << client_fd << (*it)->getClientfd() << _users.size() <<std::endl;
+
         if (client_fd == (*it)->getClientfd())
         {
             delete (*it);
             _users.erase(it);
             break ;
-            std::cout << client_fd << (*it)->getClientfd() << _users.size() <<std::endl;
         }
     }
-        std::cout << "asd" << std::endl;
 
 }
 
@@ -293,7 +285,6 @@ bool Server::isUserNameTaken(const std::string &nickname) {
 void Server::sendError(int clientSock, const std::string &message) {
     std::string fullMessage = "ERROR " + message; 
     send(clientSock, fullMessage.c_str(), fullMessage.length(), 0);
-
 }
 void Server::sendMessage(int clientSock, const std::string &message) {
     send(clientSock, message.c_str(), message.length(), 0);
@@ -355,37 +346,58 @@ void Server::handleEvents()
                     break;
                 }
             } else {
-                char message[1024] = {0};
-                memset(message, '\0', sizeof(message));
-                ssize_t bytes_received = recv(pfd.fd, message, sizeof(message), 0);
-                if (bytes_received > 0) {
-                    std::string message_str(message);
-                    message_str = trim(message_str);
-                    std::cout << message_str << "else içi std"<< std::endl;
-                    //const_iterator sorun çıkarabilir. ŞERH düşüyorum.
-                    for(std::vector<User *>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
-
-                        if((*it)->getClientfd() == pfd.fd && message_str.find("\r\n") && !(*it)->didRegister())
+                char buffer[1024] = {0};
+                std::string accumulated_message;
+                bool end_of_message = false;
+                while (!end_of_message) {
+                    ssize_t bytes_received = recv(pfd.fd, buffer, sizeof(buffer) - 1, 0);
+                    if (bytes_received == 0) {
+                        std::cout << "Connection closed by client on fd: " << pfd.fd << std::endl;
+                        removeUserAndFd(pfd.fd);
+                        break;
+                    }
+                    for (ssize_t i = 0; i < bytes_received; i++) {
+                        if (buffer[i] == '\n') {
+                            accumulated_message += buffer[i];
+                            end_of_message = true;
+                            if(buffer[i-1] == '\r')
+                                continue;
+                            else
+                                break;
+                        } else {
+                            accumulated_message += buffer[i];
+                        }
+                    }
+                }
+                std::cout <<"---123"<< accumulated_message << "---123"<<std::endl;
+                // Mesajı işleme
+                if (end_of_message) {
+                    if (!accumulated_message.empty()) {
+                        accumulated_message = trim(accumulated_message);
+                        if(accumulated_message.empty())
+                            break;
+                       for(std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
+                        if((*it)->getClientfd() == pfd.fd && accumulated_message.find("\r\n") && !(*it)->didRegister())
                         {
-                            forRegisterFromClient(message_str,pfd.fd,*it);
-
+                            forRegisterFromClient(accumulated_message,pfd.fd,*it);
                         }
                         if ((*it)->getClientfd() == pfd.fd && !(*it)->didRegister()) {
-                            forRegister(message_str, pfd.fd, *it);
+                            forRegister(accumulated_message, pfd.fd, *it);
                             break;
                         }
                         else
                         {
                             if ((*it)->getClientfd() == pfd.fd && (*it)->didRegister())
-                                _commands->commandFinder(message_str, *it);
+                            {
+                                 _commands->commandFinder(accumulated_message, *it);
+                                break;
+                            }
                         }
                         if (_users.empty())
                             break;
-                        std::cout << _users.size() << std::endl;
+                    }
                     }
                 }
-                else if (bytes_received < 0)
-			        break ;
             }
 
         }
@@ -416,4 +428,15 @@ std::vector<User *> Server::getUsers()
 std::vector<Channel *> Server::getChannel()
 {
 	return _channel;
+}
+
+User *Server::findUserByNick(const std::string &nickName)
+{
+    for (std::vector<User*>::iterator it = _users.begin(); it != _users.end(); ++it) {
+        User* user = *it;
+        if ((*it)->getNickName() == nickName) {
+            return (*it);
+        }
+    }
+    return nullptr;
 }
